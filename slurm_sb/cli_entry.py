@@ -4,6 +4,7 @@ import sys
 
 from . import __version__  # noqa: F401
 from . import cli_probe
+from . import sacct_adapter
 
 
 def main(argv=None):  # type: ignore[override]
@@ -14,6 +15,8 @@ def main(argv=None):  # type: ignore[override]
     cmd = argv.pop(0)
     if cmd == "probe":
         return cli_probe.main(argv)
+    if cmd == "sacct":
+        return sacct_adapter.main(argv)
     print("Unknown command: %s" % cmd, file=sys.stderr)
     return 1
 
