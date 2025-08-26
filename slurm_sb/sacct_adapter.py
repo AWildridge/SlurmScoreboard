@@ -75,7 +75,7 @@ def _refill_and_consume(cluster, rate_per_min):
     _TOKEN_BUCKETS[cluster] = bucket
 
 
-def run_sacct(since, until, cluster, include_steps=False, fields=FIELDS, rate_per_min=DEFAULT_RATE_PER_MIN, timeout=120, retries=3):
+def run_sacct(since, until, cluster, include_steps=False, fields=FIELDS, rate_per_min=DEFAULT_RATE_PER_MIN, timeout=120, retries=3, user=None):
     """Execute sacct for a time window and return list of raw lines (pipe-delimited).
 
     since, until: YYYY-MM-DD or full timestamp strings accepted by sacct.
@@ -92,6 +92,9 @@ def run_sacct(since, until, cluster, include_steps=False, fields=FIELDS, rate_pe
         '-E', until,
         '-o', fields,
     ]
+    if user:
+        # User-scoped query for targeted backfill / discovery.
+        cmd.extend(['-u', user])
     # NOTE: Could add --clusters or -M mapping later if needed.
     attempt = 0
     backoff = 1.0
@@ -133,6 +136,7 @@ def build_arg_parser():
     p.add_argument('--timeout', type=int, default=120, help='Subprocess timeout (s)')
     p.add_argument('--retries', type=int, default=3, help='Retries on failure/timeout')
     p.add_argument('--fields', default=FIELDS, help='Comma list of sacct -o fields (defaults to project set)')
+    p.add_argument('--user', help='Filter to single user (for targeted queries)')
     p.add_argument('--print', action='store_true', help='Print raw lines (default true). Provided for symmetry.')
     return p
 
@@ -149,6 +153,7 @@ def main(argv=None):
             rate_per_min=args.rate_per_min,
             timeout=args.timeout,
             retries=args.retries,
+            user=args.user,
         )
     except SacctError as e:
         log_json(cluster=args.cluster, phase='sacct', level='CRITICAL', start=args.since, end=args.until, exit_code='FAIL', msg=str(e))
