@@ -120,45 +120,41 @@ def build_arg_parser():
     return p
 
 
-def main(argv=None):
-    args = build_arg_parser().parse_args(argv)
-    root = args.root
-    cluster = args.cluster
+def run_discovery(root, cluster, rate_per_min, backfill_start_date=None, limit_users=5):
+    """Core discovery logic (callable from poller). Returns result dict.
+
+    backfill_start_date: optional YYYY-MM-DD to initialize state if missing.
+    """
     state_dir = backfill_mod.ensure_state_dir(root, cluster)
     state_path = os.path.join(state_dir, backfill_mod.STATE_FILENAME)
     state = backfill_mod.load_state(state_path)
-    if not state.get('backfill_start'):
-        # Initialize using provided --backfill-start
+    if not state.get('backfill_start') and backfill_start_date:
         try:
-            dt = datetime.strptime(args.backfill_start, '%Y-%m-%d')
+            dt = datetime.strptime(backfill_start_date, '%Y-%m-%d')
         except Exception:  # noqa: BLE001
-            print(json.dumps({'status': 'error', 'error': 'invalid_backfill_start'}))
-            return 2
+            return {'status': 'error', 'error': 'invalid_backfill_start', 'cluster': cluster}
         state['backfill_start'] = backfill_mod.month_str(dt)
         backfill_mod.atomic_write_json(state_path, state)
-    backfill_start_month = state['backfill_start']
+    backfill_start_month = state.get('backfill_start')
     last_complete = state.get('last_complete_month')
-    # If no completed months yet, nothing to retro backfill; exit early.
-    if last_complete is None:
-        print(json.dumps({'status': 'no_complete_months', 'cluster': cluster}))
-        return 0
-    # Build month list inclusive
+    if backfill_start_month is None or last_complete is None:
+        return {'status': 'no_complete_months', 'cluster': cluster}
     months = list(month_iter(backfill_start_month, last_complete))
-    now_iso = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     known = load_known_users(root, cluster)
     home_users = list_home_users()
-    sacct_users = enumerate_sacct_users(cluster, args.rate_per_min, since=backfill_start_month + '-01', until=backfill_mod.next_month_str(last_complete) + '-01')
+    sacct_users = enumerate_sacct_users(cluster, rate_per_min, since=backfill_start_month + '-01', until=backfill_mod.next_month_str(last_complete) + '-01')
     discovered = set(home_users) | set(sacct_users)
     new_users = [u for u in sorted(discovered) if u not in known]
     processed = []
-    for u in new_users[:args.limit_users]:
+    for u in new_users[:limit_users]:
         per_user_changes = []
         for m in months:
-            stats = run_user_month(root, cluster, m, u, args.rate_per_min)
+            stats = run_user_month(root, cluster, m, u, rate_per_min)
             if stats.get('months_changed'):
                 per_user_changes.append(m)
         processed.append({'user': u, 'months_changed': per_user_changes})
-    result = {
+    now_iso = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    return {
         'status': 'ok',
         'cluster': cluster,
         'asof': now_iso,
@@ -168,8 +164,19 @@ def main(argv=None):
         'new_users_found': len(new_users),
         'new_users_processed': processed,
     }
+
+
+def main(argv=None):
+    args = build_arg_parser().parse_args(argv)
+    result = run_discovery(
+        root=args.root,
+        cluster=args.cluster,
+        rate_per_min=args.rate_per_min,
+        backfill_start_date=args.backfill_start,
+        limit_users=args.limit_users,
+    )
     print(json.dumps(result, sort_keys=True))
-    return 0
+    return 0 if result.get('status') in ('ok', 'no_complete_months') else 1
 
 
 if __name__ == '__main__':  # pragma: no cover

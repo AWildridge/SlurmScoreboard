@@ -11,12 +11,13 @@ from . import rollup_store as rollup_mod
 from . import backfill as backfill_mod
 from . import discover as discover_mod
 from . import leaderboards as leaderboards_mod
+from . import cli_poll as poll_mod
 
 
 def main(argv=None):  # type: ignore[override]
     argv = list(sys.argv[1:] if argv is None else argv)
     if (not argv) or (argv[0] in ("-h", "--help")):
-    print("slurm-sb <command> [options]\n\nCommands:\n  probe        Environment diagnostics\n  sacct        Raw sacct invocation wrapper\n  parse        Parse sacct lines -> normalized JSON\n  bloom        Bloom filter utilities\n  reduce       Streaming reducer (monthly + all-time)\n  backfill     Backfill historical months (Milestone 6)\n  discover     User discovery & targeted backfill (Milestone 7)\n  leaderboards Generate merged leaderboards (Milestone 8)\n")
+    print("slurm-sb <command> [options]\n\nCommands:\n  probe        Environment diagnostics\n  sacct        Raw sacct invocation wrapper\n  parse        Parse sacct lines -> normalized JSON\n  bloom        Bloom filter utilities\n  reduce       Streaming reducer (monthly + all-time)\n  backfill     Backfill historical months (Milestone 6)\n  discover     User discovery & targeted backfill (Milestone 7)\n  leaderboards Generate merged leaderboards (Milestone 8)\n  poll         Orchestrate backfill/incremental + leaderboards (Milestone 9)\n")
         return 0
     cmd = argv.pop(0)
     if cmd == "probe":
@@ -35,6 +36,8 @@ def main(argv=None):  # type: ignore[override]
         return discover_mod.main(argv)
     if cmd == "leaderboards":
         return leaderboards_mod.main(argv)
+    if cmd == "poll":
+        return poll_mod.main(argv)
     print("Unknown command: %s" % cmd, file=sys.stderr)
     return 1
 
