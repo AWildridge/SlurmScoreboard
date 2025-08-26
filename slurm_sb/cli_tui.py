@@ -317,7 +317,21 @@ def draw(screen, state):
     screen.attrset(0)
     y += 1
     rows = state['rows']
-    for e in rows:
+    # Adjust scroll if list shrank
+    if state['scroll'] > max(0, len(rows) - 1):
+        state['scroll'] = max(0, len(rows) - 1)
+    visible_capacity = max_y - y - 2  # reserve footer
+    start = state.get('scroll', 0)
+    end = start + visible_capacity
+    if start > 0 and curses and curses.has_colors():
+        screen.attrset(curses.A_DIM)
+        screen.addnstr(y, 0, '... (%d above)' % start, max_x)
+        screen.attrset(0)
+        y += 1
+        visible_capacity -= 1
+        end = start + visible_capacity
+    sliced = rows[start:end]
+    for e in sliced:
         if y >= max_y - 2:
             break
         rank_for_sort = e['ranks'].get(state['metric'])
@@ -328,6 +342,12 @@ def draw(screen, state):
         if curses and curses.has_colors():
             screen.attrset(curses.color_pair(2))
         screen.addnstr(y, 0, line[:max_x], max_x)
+        screen.attrset(0)
+        y += 1
+    if end < len(rows) and y < max_y - 2:
+        # Indicate more below
+        screen.attrset(curses.A_DIM)
+        screen.addnstr(y, 0, '... (%d more)' % (len(rows) - end), max_x)
         screen.attrset(0)
         y += 1
     # Footer
@@ -356,6 +376,7 @@ def curses_main(stdscr, args):
         'sort_asc': args.sort_asc,
         'filter': args.filter,
         'rows': [],
+    'scroll': 0,
     }
     last_load = 0.0
     refresh_interval = max(1, int(args.refresh_sec))
@@ -381,13 +402,13 @@ def curses_main(stdscr, args):
         if ch in (ord('q'), ord('Q')):
             break
         if ch in (ord('r'), ord('R')):
-            reload_rows(); last_load = time.time(); draw(stdscr, state)
+            reload_rows(); last_load = time.time(); state['scroll']=0; draw(stdscr, state)
         elif ch in (ord('s'), ord('S')):
-            state['sort_asc'] = not state['sort_asc']; reload_rows(); draw(stdscr, state)
+            state['sort_asc'] = not state['sort_asc']; reload_rows(); state['scroll']=0; draw(stdscr, state)
         elif ch in (ord('w'), ord('W')):
             order = ['alltime', '30d', '365d']
             idx = (order.index(state['window']) + 1) % len(order)
-            state['window'] = order[idx]; reload_rows(); draw(stdscr, state)
+            state['window'] = order[idx]; reload_rows(); state['scroll']=0; draw(stdscr, state)
         elif ch in (ord('m'), ord('M'), 9):  # 9 == TAB
             # Non-blocking metric cycling to avoid freezes from prompt getstr
             try:
@@ -400,12 +421,27 @@ def curses_main(stdscr, args):
             else:  # TAB or 'm'
                 idx = (cur_idx + 1) % len(METRICS)
             state['metric'] = METRICS[idx]
-            reload_rows(); draw(stdscr, state)
+            reload_rows(); state['scroll']=0; draw(stdscr, state)
         elif ch in (ord('g'), ord('G')):
             idx = (clist.index(state['cluster']) + 1) % len(clist)
-            state['cluster'] = clist[idx]; reload_rows(); draw(stdscr, state)
+            state['cluster'] = clist[idx]; reload_rows(); state['scroll']=0; draw(stdscr, state)
         elif ch in (ord('f'), ord('F'), ord('/')):
             prompt(stdscr, state, 'Filter substring (empty clears): ', 'filter', None, reload_rows, allow_empty=True)
+            state['scroll']=0
+        elif ch in (curses.KEY_DOWN, ord('j')):
+            if state['scroll'] < max(0, len(state['rows']) - 1):
+                state['scroll'] += 1; draw(stdscr, state)
+        elif ch in (curses.KEY_UP, ord('k')):
+            if state['scroll'] > 0:
+                state['scroll'] -= 1; draw(stdscr, state)
+        elif ch == curses.KEY_NPAGE:  # Page Down
+            max_y, _ = stdscr.getmaxyx()
+            page = max_y - 6
+            state['scroll'] = min(max(0, len(state['rows']) - 1), state['scroll'] + page); draw(stdscr, state)
+        elif ch == curses.KEY_PPAGE:  # Page Up
+            max_y, _ = stdscr.getmaxyx()
+            page = max_y - 6
+            state['scroll'] = max(0, state['scroll'] - page); draw(stdscr, state)
         # ignore others
 
 
