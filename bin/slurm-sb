@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Thin wrapper to invoke the installed Python entrypoint or local package.
+set -euo pipefail
+if command -v python3 >/dev/null 2>&1; then
+	PY=python3
+else
+	echo "python3 not found" >&2
+	exit 127
+fi
+
+# If running from a git/working copy without installation, prefer in-tree module.
+if [ -f "$(dirname "$0")/../slurm_sb/cli_entry.py" ]; then
+	exec "$PY" -m slurm_sb.cli_entry "$@"
+else
+	exec "$PY" -m slurm_sb.cli_entry "$@"
+fi

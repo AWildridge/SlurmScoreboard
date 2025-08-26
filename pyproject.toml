@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slurm-scoreboard"
+version = "0.0.1"
+description = "OSRS-style SLURM usage high score board (bootstrap milestone)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+	{name = "SlurmScoreboard Maintainers"}
+]
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"License :: OSI Approved :: MIT License",
+	"Operating System :: POSIX :: Linux"
+]
+dependencies = []  # keep zero runtime deps for core
+
+[project.scripts]
+slurm-sb = "slurm_sb.cli_entry:main"
+
+[tool.setuptools.packages.find]
+include = ["slurm_sb*"]
