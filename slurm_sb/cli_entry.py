@@ -5,6 +5,7 @@ import sys
 from . import __version__  # noqa: F401
 from . import cli_probe
 from . import sacct_adapter
+from . import parser as parser_mod
 
 
 def main(argv=None):  # type: ignore[override]
@@ -17,6 +18,8 @@ def main(argv=None):  # type: ignore[override]
         return cli_probe.main(argv)
     if cmd == "sacct":
         return sacct_adapter.main(argv)
+    if cmd == "parse":
+        return parser_mod.main(argv)
     print("Unknown command: %s" % cmd, file=sys.stderr)
     return 1
 
