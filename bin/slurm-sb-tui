@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Curses TUI wrapper (zero-install). Launches the stdlib-only viewer.
+set -euo pipefail
+if command -v python3 >/dev/null 2>&1; then
+  PY=python3
+else
+  echo "python3 not found" >&2
+  exit 127
+fi
+ROOT_DEFAULT="${SLURM_SB_ROOT:-/depot/cms/top/awildrid/SlurmScoreboard}"
+# Pass through args; default --root if not provided
+have_root=0
+for a in "$@"; do
+  if [ "$a" = "--root" ]; then have_root=1; break; fi
+  case "$a" in --root=*) have_root=1;; esac
+done
+if [ $have_root -eq 0 ]; then
+  exec "$PY" -m slurm_sb.cli_tui --root "$ROOT_DEFAULT" "$@"
+else
+  exec "$PY" -m slurm_sb.cli_tui "$@"
+fi
