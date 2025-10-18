@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Control helper for slurm-sb-daemon across login nodes using recorded pid/host
+set -euo pipefail
+
+ROOT=${SLURM_SB_ROOT:-/depot/cms/top/awildrid/SlurmScoreboard}
+CLUSTER=""
+CMD="status"
+SIGNAL="TERM"
+SSH_OPTS=(-o BatchMode=yes -o ConnectTimeout=5)
+
+usage() {
+  echo "Usage: $0 --cluster NAME [--root PATH] [--status|--stop|--signal SIG]" >&2
+  exit 2
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --cluster) CLUSTER="$2"; shift 2;;
+    --cluster=*) CLUSTER="${1#*=}"; shift;;
+    --root) ROOT="$2"; shift 2;;
+    --root=*) ROOT="${1#*=}"; shift;;
+    --stop) CMD="stop"; shift;;
+    --status) CMD="status"; shift;;
+    --signal) SIGNAL="$2"; CMD="signal"; shift 2;;
+    --signal=*) SIGNAL="${1#*=}"; CMD="signal"; shift;;
+    -h|--help) usage;;
+    *) usage;;
+  esac
+done
+
+[ -n "$CLUSTER" ] || usage
+PIDFILE="$ROOT/clusters/$CLUSTER/state/daemon.pid"
+if [ ! -f "$PIDFILE" ]; then
+  echo "no pidfile at $PIDFILE" >&2
+  exit 1
+fi
+
+read -r pid host < "$PIDFILE" || { echo "bad pidfile" >&2; exit 1; }
+
+case "$CMD" in
+  status)
+    if ssh "${SSH_OPTS[@]}" "$host" "ps -p $pid -o pid= >/dev/null 2>&1"; then
+      echo "running pid=$pid host=$host"
+      exit 0
+    else
+      echo "not running (pid=$pid host=$host)"
+      exit 3
+    fi
+    ;;
+  stop)
+    ssh "${SSH_OPTS[@]}" "$host" "kill -TERM $pid" || true
+    echo "sent SIGTERM to pid=$pid on $host"
+    ;;
+  signal)
+    ssh "${SSH_OPTS[@]}" "$host" "kill -$SIGNAL $pid" || true
+    echo "sent SIG$SIGNAL to pid=$pid on $host"
+    ;;
+  *) usage;;
+esac

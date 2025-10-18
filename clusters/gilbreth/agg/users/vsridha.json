@@ -1,0 +1,1 @@
+{"clusters":{"gilbreth":{"asof":"2025-10-17T20:16:25Z","count_failed_jobs":4.0,"count_gpu_jobs":93.0,"gpu_elapsed_hours":8.270833333333327,"sum_avg_mem_MB":0.0,"sum_max_mem_MB":0.0,"sum_req_mem_MB":3285000.0,"total_clock_hours":20.012499999999996,"total_elapsed_hours":8.270833333333327,"total_gpu_clock_hours":8.270833333333327}},"schema_version":1,"username":"vsridha"}

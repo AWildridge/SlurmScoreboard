@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# SlurmScoreboard polling daemon (Milestone 11 helper)
+# Repeatedly runs a single poll tick for a cluster at a fixed interval.
+# Features:
+#  * Graceful SIGINT/SIGTERM shutdown
+#  * Distinguishes lock contention (exit 3) with shorter retry sleep
+#  * Optional backfill start date override
+#  * Heartbeat file written each loop
+#  * Jitter to avoid thundering herd when many clusters start simultaneously
+#
+# Usage:
+#   slurm-sb-daemon --cluster hammer [--root /path] [--interval 600] [--lock-wait 45] [--backfill-start YYYY-MM-DD]
+#
+# Environment overrides:
+#   SLURM_SB_ROOT  (default /depot/cms/top/awildrid/SlurmScoreboard)
+#
+set -euo pipefail
+
+ROOT_DEFAULT=${SLURM_SB_ROOT:-/depot/cms/top/awildrid/SlurmScoreboard}
+CLUSTER=""
+INTERVAL=600
+LOCK_WAIT=45
+BACKFILL_START=""
+JITTER_MAX=15  # seconds added to each sleep (random 0..JITTER_MAX)
+DEBUG_SLEEP=0  # set via --debug-sleep
+
+# Parse args
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --cluster) CLUSTER="$2"; shift 2;;
+    --cluster=*) CLUSTER="${1#*=}"; shift;;
+    --root) ROOT_DEFAULT="$2"; shift 2;;
+    --root=*) ROOT_DEFAULT="${1#*=}"; shift;;
+    --interval) INTERVAL="$2"; shift 2;;
+    --interval=*) INTERVAL="${1#*=}"; shift;;
+    --lock-wait) LOCK_WAIT="$2"; shift 2;;
+    --lock-wait=*) LOCK_WAIT="${1#*=}"; shift;;
+    --backfill-start) BACKFILL_START="$2"; shift 2;;
+    --backfill-start=*) BACKFILL_START="${1#*=}"; shift;;
+    --debug-sleep) DEBUG_SLEEP=1; shift;;
+    -h|--help)
+      echo "Usage: $0 --cluster NAME [--root PATH] [--interval SEC] [--lock-wait SEC] [--backfill-start YYYY-MM-DD] [--debug-sleep]"; exit 0;;
+    *) echo "Unknown arg: $1" >&2; exit 2;;
+  esac
+done
+
+if [ -z "$CLUSTER" ]; then
+  echo "--cluster required" >&2
+  exit 2
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 not found" >&2
+  exit 127
+fi
+
+BIN_DIR="$(dirname "$0")"
+POLL="$BIN_DIR/slurm-sb"
+if [ ! -x "$POLL" ]; then
+  echo "slurm-sb wrapper not found at $POLL" >&2
+  exit 2
+fi
+
+HOST="$(hostname -f 2>/dev/null || hostname)"
+SELF_PID="$$"
+
+RUNNING=1
+trap 'RUNNING=0' INT TERM
+
+echo "[slurm-sb-daemon] Starting cluster=$CLUSTER interval=${INTERVAL}s lock-wait=${LOCK_WAIT}s root=$ROOT_DEFAULT" >&2
+
+# Heartbeat path
+HB_DIR="$ROOT_DEFAULT/clusters/$CLUSTER/state"
+mkdir -p "$HB_DIR"
+HB_FILE="$HB_DIR/daemon_heartbeat.json"
+DAEMON_PIDFILE="$HB_DIR/daemon.pid"
+DAEMON_LOCKFILE="$HB_DIR/daemon.lock"
+
+# Cross-node singleton lock (fd 9)
+exec 9>"$DAEMON_LOCKFILE"
+if ! flock -n 9; then
+  echo "[slurm-sb-daemon] Another instance holds $DAEMON_LOCKFILE; refusing to start" >&2
+  exit 3
+fi
+
+# Record pid and host for management; ensure cleanup on exit
+echo "$SELF_PID $HOST" > "$DAEMON_PIDFILE"
+cleanup_pidfile() { rm -f "$DAEMON_PIDFILE" 2>/dev/null || true; }
+trap cleanup_pidfile EXIT
+
+loop=0
+# For stable cadence, maintain a scheduled next_deadline (epoch seconds)
+NEXT_DEADLINE=""
+while [ $RUNNING -eq 1 ]; do
+  loop=$((loop+1))
+  ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  echo "{\"ts\":\"$ts\",\"loop\":$loop,\"cluster\":\"$CLUSTER\",\"phase\":\"invoke\",\"host\":\"$HOST\",\"pid\":$SELF_PID}" > "$HB_FILE.tmp" 2>/dev/null || true
+  mv -f "$HB_FILE.tmp" "$HB_FILE" 2>/dev/null || true
+
+  args=( poll --cluster "$CLUSTER" --root "$ROOT_DEFAULT" )
+  if [ -n "$BACKFILL_START" ]; then
+    args+=( --backfill-start "$BACKFILL_START" )
+  fi
+  start_sec=$(date +%s)
+  set +e
+  "$POLL" "${args[@]}"
+  rc=$?
+  set -e
+  end_sec=$(date +%s)
+  duration=$((end_sec - start_sec))
+  ts_done=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  echo "{\"ts\":\"$ts_done\",\"loop\":$loop,\"cluster\":\"$CLUSTER\",\"phase\":\"done\",\"rc\":$rc,\"duration_sec\":$duration,\"host\":\"$HOST\",\"pid\":$SELF_PID}" > "$HB_FILE.tmp" 2>/dev/null || true
+  mv -f "$HB_FILE.tmp" "$HB_FILE" 2>/dev/null || true
+
+  if [ $RUNNING -ne 1 ]; then break; fi
+
+  if [ $rc -eq 3 ]; then
+    # Lock contention: shorter sleep, do NOT advance schedule
+    base_sleep=$LOCK_WAIT
+  else
+    # Stable cadence anchored to schedule (not last duration)
+    # Initialize schedule on first successful tick
+    if [ -z "$NEXT_DEADLINE" ]; then
+      NEXT_DEADLINE=$((start_sec + INTERVAL))
+    fi
+    now_sec=$(date +%s)
+    # Ensure NEXT_DEADLINE is in the future (catch up if we overran)
+    while [ "$NEXT_DEADLINE" -le "$now_sec" ]; do
+      NEXT_DEADLINE=$((NEXT_DEADLINE + INTERVAL))
+    done
+    base_sleep=$((NEXT_DEADLINE - now_sec))
+    if [ "$base_sleep" -lt 0 ]; then base_sleep=0; fi
+  fi
+  # Jitter (centered around 0 to avoid cumulative positive drift)
+  if [ $JITTER_MAX -gt 0 ]; then
+    # uniform integer in [-JITTER_MAX, +JITTER_MAX]
+    jitter=$(( (RANDOM % (2*JITTER_MAX+1)) - JITTER_MAX ))
+  else
+    jitter=0
+  fi
+  sleep_time=$((base_sleep + jitter))
+  # Never sleep negative duration
+  if [ $sleep_time -lt 0 ]; then
+    sleep_time=0
+  fi
+  if [ $sleep_time -gt 0 ] && [ $RUNNING -eq 1 ]; then
+    if [ $DEBUG_SLEEP -eq 1 ]; then
+      wake_eta=$(date -u -d "+$sleep_time seconds" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || true)
+      echo "[slurm-sb-daemon] loop=$loop rc=$rc duration=${duration}s base_sleep=${base_sleep}s jitter=${jitter}s final_sleep=${sleep_time}s wake_eta=${wake_eta} next_deadline=${NEXT_DEADLINE:-na}" >&2
+    fi
+    sleep $sleep_time
+  else
+    if [ $DEBUG_SLEEP -eq 1 ]; then
+      echo "[slurm-sb-daemon] loop=$loop rc=$rc duration=${duration}s no-sleep next_deadline=${NEXT_DEADLINE:-na}" >&2
+    fi
+  fi
+ done
+
+echo "[slurm-sb-daemon] Stopped cluster=$CLUSTER loops=$loop" >&2

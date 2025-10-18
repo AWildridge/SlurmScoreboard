@@ -1,0 +1,37 @@
+[slurm-sb-daemon] Starting cluster=hammer interval=600s lock-wait=45s root=/depot/cms/top/awildrid/SlurmScoreboard
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:37:30.287806Z"}
+[slurm-sb-daemon] loop=1 rc=3 duration=0s base_sleep=45s jitter=-8s final_sleep=37s wake_eta=2025-10-18T05:38:07Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:38:07.542026Z"}
+[slurm-sb-daemon] loop=2 rc=3 duration=0s base_sleep=45s jitter=1s final_sleep=46s wake_eta=2025-10-18T05:38:53Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:38:53.784320Z"}
+[slurm-sb-daemon] loop=3 rc=3 duration=0s base_sleep=45s jitter=4s final_sleep=49s wake_eta=2025-10-18T05:39:42Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:39:43.072350Z"}
+[slurm-sb-daemon] loop=4 rc=3 duration=1s base_sleep=45s jitter=-9s final_sleep=36s wake_eta=2025-10-18T05:40:19Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:40:19.317881Z"}
+[slurm-sb-daemon] loop=5 rc=3 duration=0s base_sleep=45s jitter=-7s final_sleep=38s wake_eta=2025-10-18T05:40:57Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:40:57.553181Z"}
+[slurm-sb-daemon] loop=6 rc=3 duration=0s base_sleep=45s jitter=-6s final_sleep=39s wake_eta=2025-10-18T05:41:36Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:41:36.801841Z"}
+[slurm-sb-daemon] loop=7 rc=3 duration=0s base_sleep=45s jitter=2s final_sleep=47s wake_eta=2025-10-18T05:42:23Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:42:24.048843Z"}
+[slurm-sb-daemon] loop=8 rc=3 duration=1s base_sleep=45s jitter=-3s final_sleep=42s wake_eta=2025-10-18T05:43:06Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:43:06.314749Z"}
+[slurm-sb-daemon] loop=9 rc=3 duration=0s base_sleep=45s jitter=-12s final_sleep=33s wake_eta=2025-10-18T05:43:39Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:43:39.562770Z"}
+[slurm-sb-daemon] loop=10 rc=3 duration=0s base_sleep=45s jitter=5s final_sleep=50s wake_eta=2025-10-18T05:44:29Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:44:29.889036Z"}
+[slurm-sb-daemon] loop=11 rc=3 duration=0s base_sleep=45s jitter=-10s final_sleep=35s wake_eta=2025-10-18T05:45:04Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:45:05.133043Z"}
+[slurm-sb-daemon] loop=12 rc=3 duration=1s base_sleep=45s jitter=-3s final_sleep=42s wake_eta=2025-10-18T05:45:47Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:45:47.372834Z"}
+[slurm-sb-daemon] loop=13 rc=3 duration=0s base_sleep=45s jitter=4s final_sleep=49s wake_eta=2025-10-18T05:46:36Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:46:36.622703Z"}
+[slurm-sb-daemon] loop=14 rc=3 duration=0s base_sleep=45s jitter=15s final_sleep=60s wake_eta=2025-10-18T05:47:36Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:47:36.908971Z"}
+[slurm-sb-daemon] loop=15 rc=3 duration=0s base_sleep=45s jitter=4s final_sleep=49s wake_eta=2025-10-18T05:48:25Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:48:26.151845Z"}
+[slurm-sb-daemon] loop=16 rc=3 duration=1s base_sleep=45s jitter=14s final_sleep=59s wake_eta=2025-10-18T05:49:25Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:49:25.446871Z"}
+[slurm-sb-daemon] loop=17 rc=3 duration=0s base_sleep=45s jitter=6s final_sleep=51s wake_eta=2025-10-18T05:50:16Z next_deadline=na
+{"cluster": "hammer", "level": "INFO", "phase": "lock", "status": "locked", "ts": "2025-10-18T05:50:16.703020Z"}
+[slurm-sb-daemon] loop=18 rc=3 duration=0s base_sleep=45s jitter=-2s final_sleep=43s wake_eta=2025-10-18T05:50:59Z next_deadline=na

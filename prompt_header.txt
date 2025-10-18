@@ -1,0 +1,23 @@
+Project: SlurmScoreboard — OSRS‑style terminal high scores for SLURM.
+
+Root data dir: /depot/cms/top/awildrid/SlurmScoreboard (shared across clusters).
+
+Clusters in scope: hammer, negishi, bell, gautschi, gilbreth (exclude geddes).
+
+Permissions: no sudo; sacct/squeue available on login nodes.
+
+Granularity: job‑level only (exclude steps with dotted JobIDs).
+
+Failures: do not count CANCELLED.
+
+Memory units: base‑10 MB (K=1e3, M=1e6, G=1e9, T=1e12).
+
+Storage model: per‑user monthly rollups + Bloom dedupe per (cluster, month); optional 90‑day raw cache.
+
+Default TUI: Python stdlib curses (zero‑install). Optional deluxe: textual (opt‑in).
+
+sacct fields: JobID,User,State,ElapsedRaw,AllocCPUS,NNodes,ReqMem,MaxRSS,AveRSS,AllocTRES,Submit,Start,End.
+
+Rate limits: ≤ 2 sacct calls/min/cluster, with backoff on errors.
+
+Idempotency: re‑runs must not inflate totals; use Bloom filters.

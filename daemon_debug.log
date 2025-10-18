@@ -1,0 +1,2 @@
+[slurm-sb-daemon] Starting cluster=hammer interval=600s lock-wait=45s root=/depot/cms/top/awildrid/SlurmScoreboard
+[slurm-sb-daemon] loop=1 rc=0 duration=18152s base_sleep=0s jitter=6s final_sleep=6s wake_eta=2025-09-15T15:26:52Z
